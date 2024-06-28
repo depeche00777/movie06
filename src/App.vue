@@ -1,135 +1,126 @@
 <template>
-  <main class="app">
-    <section class="greeting">
-      <h1 class="title">
-        TODO LIST
-        <input type="text" placeholder="name here" v-model.lazy="name">
-      </h1>
-    </section>
-
-    <section class="create-todo">
-      <h2>CREATE A TODO</h2>
-      <h4>What's on your todo list?</h4>
-      <form action="" v-on:submit.prevent="addTodo">
-
+  <div class="app">
+    <header>
+      <h1>The <strong>Movie</strong> Database</h1>
+      <form class="search-box" v-on:submit.prevent="handleSearch">
         <input 
-          type="text" 
-          placeholder="할일을 입력해주세요"
-          v-model="input_content"
-        >
-
-        <div class="options">
-          <label>
-            <input type="radio" 
-              name="category" 
-              id="category1" 
-              value="business"
-              v-model="input_category">
-            <span class="bubble business"></span>
-            <div>business</div>
-          </label>
-          <label>
-            <input type="radio" 
-              name="category" 
-              id="category2" 
-              value="personal"
-              v-model="input_category">
-            <span class="bubble personal"></span>
-            <div>personal</div>
-          </label>
-        </div>
-        {{ input_content }} {{ input_category }}
-        <input type="submit" value="Add Todo">
+          type="search"
+          class="search-field"
+          placeholder="search for a Movie..."
+          v-model="search_query"
+          >
       </form>
-    </section>
+    </header>
 
-    <section class="todo-list">
-      <h3>TODO LIST</h3>
-      <div class="list" id="todo-list">
-        
-        <div v-bind:class="`todo-item ${todo.done && 'done'}`"
-          v-for="todo in todos_sort">
-          <label>
-            <input type="checkbox" v-model="todo.done">
-            <span :class="`bubble ${todo.category}`"></span>
-          </label>
-
-          <div class="todo-content">
-            <input type="text" v-model="todo.content">
-          </div>  
-          
-          <div class="actions">
-            <button class="delete" @click="removeTodo(todo)">Delete</button>
-          </div>
-          
-        </div>
-
+    <main>
+      <div class="cards">
+        <Card v-for="movie in movieList" :aa="movie"/>
+        <!-- aa라는 이름으로 movie가 전달됨 -->
       </div>
+    </main>
 
-    </section>
-  </main>
+  </div>
 </template>
 
 <script setup>
-  import { ref, watch, onMounted, computed } from 'vue';
-  
+  import { ref } from 'vue';
+  import Card from './components/Card.vue'
 
-  const name = ref('')  //이름
-  const todos = ref([])
+  const movieList = ref([]);
+  const search_query = ref('')
 
-  const input_content = ref('')   //입력 내용
-  const input_category = ref(null)   //business,personal선택
 
-  // 입력값을 todos 배열에 들어가게 하는 함수 
-  const addTodo = () => {
-    if(input_content.value.trim() === '' ||  input_category.value === null){
-      return
-    }
+  const handleSearch = async ()=>{
+    movieList.value = await fetch(`https://api.themoviedb.org/3/search/movie?query=${ search_query.value}&include_adult=false&language=ko-KR&page=1&api_key=45fcb150351f5049358ecdb91b91b4e0`)
+      .then(response => response.json())  
+      .then(data =>data.results)
 
-    todos.value.push({
-      content: input_content.value,
-      category: input_category.value,
-      done:false,
-      createAt:new Date().getTime()   //UTC시간부터 현재까의 시간을 알아옴
-    })
-    console.log(todos)
-
-    // 입력 후 초기화
-    input_content.value = '';
-    input_category.value = null
-  }
-
-  //시간 순으로 정리  배열.sort((a,b)=>b-a)  -내림차순(새로운 todo가 위에보임)
-  const todos_sort = computed(()=>{
-    return todos.value.sort((a,b)=>{
-        return b.createAt - a.createAt
-      })
-  }) 
-  
-
-  // 삭제 함수
-  const removeTodo = (todo) => {
-    todos.value = todos.value.filter(t=> t != todo)
+      search_query.value = ''
   }
 
 
-  //이름 입력한 것을 인지하고 로컬스토리지에 저장
-  watch(name,(newValue)=>{
-    if(newValue != ''){
-      localStorage.setItem("name", newValue); //(키, 밸류)
-    }
-  })
-
-  //todos 배열이 바뀐것을 인지하고 로컬스토리지에 저장, 업데이트
-  watch(todos, (newVal) => {
-    localStorage.setItem('todos',JSON.stringify(newVal))
-  },{ deep:true } )
-  //JSON.stringify(newValue) - js문서를 json파일로 변환
 
 
-  //새로열었을때 로컬스토리지에서 불러오기(없을때는 비워놈)
-  onMounted(() => {
-    name.value = localStorage.getItem("name") || '';
-    todos.value = JSON.parse(localStorage.getItem('todos')) || []
-  })
+  const popular = async ()=>{
+    movieList.value = await fetch('https://api.themoviedb.org/3/movie/popular?language=ko-KR&page=1&api_key=45fcb150351f5049358ecdb91b91b4e0')
+      .then(response => response.json())  //JSON을 입력으로 받아 파싱하여 JavaSript 객체를 생성
+      .then(data =>data.results)
+
+      console.log('받아온 데이타- ',movieList.value)
+  }
+
+  
+popular()
+
+
 </script>
+
+<style lang="scss">
+  $color:#313131;
+
+  * { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box;
+    font-family: sans-serif;
+    }
+  header {
+    padding:50px 0;
+
+    h1 { 
+      color:#999;
+      text-align: center;
+      font-weight: normal;
+      text-transform: uppercase;
+      font-size: 42px;
+      margin-bottom: 30px;
+
+      strong {
+        color:$color
+      }
+    }
+  }
+
+  .search-box{
+    display: flex;
+    justify-content: center;
+    padding:0 30px;
+    .search-field{
+      appearance: none;
+      border:none;
+      outline:none;
+      padding:15px;  
+      width:100%;    
+      max-width:600px;
+      border-radius: 8px;
+
+      font-size: 20px;
+      color:$color;
+      background-color: #f3f3f3;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+
+      &::placeholder{
+        color:#aaa;
+      }
+
+      &:focus {
+        background: $color;
+        color:#fff
+      }
+
+    }
+  }
+
+  main{
+    max-width: 1200px;
+    margin: auto;
+    padding: 0 16px;
+
+    .cards{
+      display: flex;
+      flex-wrap: wrap;
+    }
+  }
+
+
+</style>
